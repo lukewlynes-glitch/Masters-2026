@@ -897,20 +897,19 @@ body {
 
 <!-- ========== TAB BAR ========== -->
 <div class="tab-bar">
-    <button class="tab-btn active" onclick="switchTab('predictions')">Predictions</button>
+    <button class="tab-btn active" onclick="switchTab('model')">Model Breakdown</button>
     <button class="tab-btn" onclick="switchTab('field')">Field & Stats</button>
     <button class="tab-btn" onclick="switchTab('fieldv2')">Field & Stats v2</button>
-    <button class="tab-btn" onclick="switchTab('model')">Model Breakdown</button>
-    <button class="tab-btn" onclick="switchTab('course')">Augusta Course</button>
     <button class="tab-btn" onclick="switchTab('historical')">Historical Winners</button>
-    <button class="tab-btn" onclick="switchTab('betting')">Betting Guide</button>
+    <button class="tab-btn" onclick="switchTab('predictions')">Predictions</button>
+    <button class="tab-btn" onclick="switchTab('course')">Augusta Course</button>
 </div>
 
 <!-- ========== MAIN ========== -->
 <div class="main">
 
 <!-- ======================== TAB 1: PREDICTIONS ======================== -->
-<div class="tab-content active" id="tab-predictions">
+<div class="tab-content" id="tab-predictions">
 
     <!-- Overview Stats -->
     <div class="grid-5" style="margin-bottom:20px;">
@@ -1100,7 +1099,7 @@ body {
 </div>
 
 <!-- ======================== TAB 3: MODEL BREAKDOWN ======================== -->
-<div class="tab-content" id="tab-model">
+<div class="tab-content active" id="tab-model">
     <div class="grid-2">
         <div>
             <div class="section-header">Prediction Model Weights</div>
@@ -1286,60 +1285,6 @@ body {
     </div>
 </div>
 
-<!-- ======================== TAB 6: BETTING GUIDE ======================== -->
-<div class="tab-content" id="tab-betting">
-    <div class="insight-box">
-        <h4>Betting Strategy — Masters 2026</h4>
-        <p>The Masters is the most predictable major. Since 2010, favorites (<span class="insight-stat">+1500 or shorter</span>) have won 10 of 16 times.
-        Focus your bankroll on the <span class="insight-stat">top 6-8 players</span> and add 1-2 value longshots.
-        Top 5 / Top 10 markets offer better value than outright winner for mid-tier contenders.</p>
-    </div>
-
-    <div class="section-header">Betting Tiers</div>
-
-    <div class="card">
-        <div class="card-header"><h2 style="color:var(--masters-gold);">Tier 1 — Locks (High Confidence)</h2></div>
-        <div class="card-body" id="bet-tier-1"><!-- JS --></div>
-    </div>
-
-    <div class="card">
-        <div class="card-header"><h2 style="color:var(--masters-green-bright);">Tier 2 — Strong Contenders</h2></div>
-        <div class="card-body" id="bet-tier-2"><!-- JS --></div>
-    </div>
-
-    <div class="card">
-        <div class="card-header"><h2 style="color:var(--accent-cyan);">Tier 3 — Value Picks</h2></div>
-        <div class="card-body" id="bet-tier-3"><!-- JS --></div>
-    </div>
-
-    <div class="card">
-        <div class="card-header"><h2 style="color:var(--accent-purple);">Tier 4 — Longshot Darts</h2></div>
-        <div class="card-body" id="bet-tier-4"><!-- JS --></div>
-    </div>
-
-    <!-- Odds Comparison Chart -->
-    <div class="card" style="margin-top:16px;">
-        <div class="card-header"><h2>Implied Probability vs Model Probability (Top 20)</h2></div>
-        <div class="chart-container">
-            <div class="chart-wrapper" style="height:400px;">
-                <canvas id="oddsChart"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <!-- Prop Bets -->
-    <div class="section-header" style="margin-top:20px;">Top Prop Bets</div>
-    <div class="grid-2">
-        <div class="card">
-            <div class="card-header"><h2>Top 5 Finish Value</h2></div>
-            <div class="card-body" id="prop-top5"><!-- JS --></div>
-        </div>
-        <div class="card">
-            <div class="card-header"><h2>Top 10 Finish Value</h2></div>
-            <div class="card-body" id="prop-top10"><!-- JS --></div>
-        </div>
-    </div>
-</div>
 
 </div><!-- /main -->
 
@@ -2920,7 +2865,7 @@ function switchTabDirect(tabId) {
     document.getElementById('tab-' + tabId).classList.add('active');
     // Highlight correct tab button
     const tabs = document.querySelectorAll('.tab-btn');
-    const tabMap = { predictions:0, field:1, fieldv2:2, model:3, course:4, historical:5, betting:6 };
+    const tabMap = { model:0, field:1, fieldv2:2, historical:3, predictions:4, course:5 };
     if (tabMap[tabId] !== undefined) tabs[tabMap[tabId]].classList.add('active');
 }
 
@@ -3585,81 +3530,8 @@ function renderHistorical() {
 }
 
 // ========================================================================
-// RENDER: BETTING TAB
-// ========================================================================
-function renderBetting() {
-    // Tier 1 — Locks
-    const tier1 = PLAYERS.filter(p => p.predScore >= 85).slice(0, 3);
-    document.getElementById('bet-tier-1').innerHTML = tier1.map(p => `
-        <div class="bet-tier bet-tier-lock">
-            <div>
-                <div class="bet-player player-link" style="color:var(--masters-gold)" onclick="openPlayerModal('${p.name.replace(/'/g,"\\'")}')">${p.name}</div>
-                <div class="bet-reason">Model Score: ${p.predScore} | Model Prob: ${p.modelProb}% | ${p.qualification}</div>
-            </div>
-            <div class="bet-odds" style="color:var(--masters-gold)">${p.odds}</div>
-        </div>
-    `).join('');
-
-    // Tier 2 — Strong
-    const tier2 = PLAYERS.filter(p => p.predScore >= 75 && p.predScore < 85).slice(0, 5);
-    document.getElementById('bet-tier-2').innerHTML = tier2.map(p => `
-        <div class="bet-tier bet-tier-strong">
-            <div>
-                <div class="bet-player player-link" style="color:var(--masters-green-bright)" onclick="openPlayerModal('${p.name.replace(/'/g,"\\'")}')">${p.name}</div>
-                <div class="bet-reason">Model Score: ${p.predScore} | Model Prob: ${p.modelProb}% | Value: ${p.value === 'good' ? '✓ Good' : p.value === 'fair' ? '— Fair' : '✗ Poor'}</div>
-            </div>
-            <div class="bet-odds" style="color:var(--masters-green-bright)">${p.odds}</div>
-        </div>
-    `).join('');
-
-    // Tier 3 — Value
-    const tier3 = PLAYERS.filter(p => p.predScore >= 65 && p.predScore < 75).slice(0, 6);
-    document.getElementById('bet-tier-3').innerHTML = tier3.map(p => `
-        <div class="bet-tier bet-tier-value">
-            <div>
-                <div class="bet-player player-link" style="color:var(--accent-cyan)" onclick="openPlayerModal('${p.name.replace(/'/g,"\\'")}')">${p.name}</div>
-                <div class="bet-reason">Model Score: ${p.predScore} | Model Prob: ${p.modelProb}% | Value: ${p.value === 'good' ? '✓ Good' : p.value === 'fair' ? '— Fair' : '✗ Poor'}</div>
-            </div>
-            <div class="bet-odds" style="color:var(--accent-cyan)">${p.odds}</div>
-        </div>
-    `).join('');
-
-    // Tier 4 — Longshots
-    const tier4 = PLAYERS.filter(p => p.predScore >= 50 && p.predScore < 65).slice(0, 5);
-    document.getElementById('bet-tier-4').innerHTML = tier4.map(p => `
-        <div class="bet-tier bet-tier-dart">
-            <div>
-                <div class="bet-player player-link" style="color:var(--accent-purple)" onclick="openPlayerModal('${p.name.replace(/'/g,"\\'")}')">${p.name}</div>
-                <div class="bet-reason">Model Score: ${p.predScore} | ${p.bestFinish.includes('Won') ? 'Past Champion!' : p.bestFinish} | Augusta apps: ${p.augustaApp}</div>
-            </div>
-            <div class="bet-odds" style="color:var(--accent-purple)">${p.odds}</div>
-        </div>
-    `).join('');
-
-    // Prop bets — Top 5 value
-    const top5Props = PLAYERS.slice(0, 15).map(p => {
-        const t5Prob = Math.min(85, p.modelProb * 4.5);
-        return { ...p, t5Prob: Math.round(t5Prob * 10) / 10 };
-    });
-    document.getElementById('prop-top5').innerHTML = top5Props.map(p => `
-        <div class="key-stat-row">
-            <span class="key-stat-label">${p.name}</span>
-            <span class="key-stat-val ${p.t5Prob > 40 ? 'elite' : p.t5Prob > 25 ? 'strong' : 'good'}">${p.t5Prob}%</span>
-        </div>
-    `).join('');
-
-    // Prop bets — Top 10 value
-    const top10Props = PLAYERS.slice(0, 20).map(p => {
-        const t10Prob = Math.min(90, p.modelProb * 7);
-        return { ...p, t10Prob: Math.round(t10Prob * 10) / 10 };
-    });
-    document.getElementById('prop-top10').innerHTML = top10Props.map(p => `
-        <div class="key-stat-row">
-            <span class="key-stat-label">${p.name}</span>
-            <span class="key-stat-val ${p.t10Prob > 55 ? 'elite' : p.t10Prob > 35 ? 'strong' : 'good'}">${p.t10Prob}%</span>
-        </div>
-    `).join('');
-}
+// (Betting tab removed)
+// (Betting tab removed)
 
 // ========================================================================
 // CHARTS
@@ -3793,43 +3665,6 @@ function renderCharts() {
         }
     });
 
-    // Odds Comparison Chart
-    const top15 = PLAYERS.slice(0, 15);
-    new Chart(document.getElementById('oddsChart'), {
-        type: 'bar',
-        data: {
-            labels: top15.map(p => p.name),
-            datasets: [
-                {
-                    label: 'Model Probability %',
-                    data: top15.map(p => p.modelProb),
-                    backgroundColor: 'rgba(46,204,113,0.6)',
-                    borderColor: '#2ecc71',
-                    borderWidth: 1,
-                    borderRadius: 3,
-                },
-                {
-                    label: 'Implied Probability %',
-                    data: top15.map(p => p.impliedProb),
-                    backgroundColor: 'rgba(6,182,212,0.4)',
-                    borderColor: '#06b6d4',
-                    borderWidth: 1,
-                    borderRadius: 3,
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { labels: { color: '#94a3b8', font: { size: 11 } } }
-            },
-            scales: {
-                x: { ticks: { color: '#94a3b8', font: { size: 10 }, maxRotation: 45 }, grid: { display: false } },
-                y: { ticks: { color: '#64748b', callback: v => v + '%' }, grid: { color: 'rgba(255,255,255,0.04)' } }
-            }
-        }
-    });
 }
 
 // ========================================================================
@@ -3862,7 +3697,6 @@ renderFieldTableV2();
 renderModel();
 renderCourse();
 renderHistorical();
-renderBetting();
 renderCharts();
 
 // ========================================================================
