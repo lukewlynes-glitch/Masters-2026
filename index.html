@@ -899,6 +899,7 @@ body {
 <div class="tab-bar">
     <button class="tab-btn active" onclick="switchTab('predictions')">Predictions</button>
     <button class="tab-btn" onclick="switchTab('field')">Field & Stats</button>
+    <button class="tab-btn" onclick="switchTab('fieldv2')">Field & Stats v2</button>
     <button class="tab-btn" onclick="switchTab('model')">Model Breakdown</button>
     <button class="tab-btn" onclick="switchTab('course')">Augusta Course</button>
     <button class="tab-btn" onclick="switchTab('historical')">Historical Winners</button>
@@ -1033,6 +1034,66 @@ body {
                     </tr>
                 </thead>
                 <tbody id="field-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ======================== TAB 2B: FIELD & STATS V2 ======================== -->
+<div class="tab-content" id="tab-fieldv2">
+    <div class="insight-box" style="margin-bottom:16px;">
+        <h4>V2 Model — Enhanced Short Game & Proximity Metrics</h4>
+        <p>This model adds <span class="insight-stat">5 new factors</span> to the original 12: Proximity to Hole, Putting Inside 10ft, 3-Putt Avoidance, Scrambling from 30+ Yards, and Proximity ARG.
+        These metrics capture <span class="insight-stat">Augusta's green complexes</span> — where tournaments are won and lost.
+        Compare the <span class="insight-stat">V1 vs V2 scores</span> and the <span class="insight-stat">Diff</span> column to see who benefits most from the enhanced model.
+        <span style="color:var(--accent-orange);">LIV players use last known PGA Tour stats + estimated current form.</span></p>
+    </div>
+    <div class="filter-row">
+        <label>Tour:</label>
+        <select id="filter-tour-v2" onchange="renderFieldTableV2()">
+            <option value="all">All Tours</option>
+            <option value="PGA">PGA Tour</option>
+            <option value="LIV">LIV Golf</option>
+            <option value="DP">DP World Tour</option>
+        </select>
+        <label>Tier:</label>
+        <select id="filter-tier-v2" onchange="renderFieldTableV2()">
+            <option value="all">All Tiers</option>
+            <option value="Favorite">Favorites</option>
+            <option value="Contender">Contenders</option>
+            <option value="Dark Horse">Dark Horses</option>
+            <option value="Longshot">Longshots</option>
+        </select>
+        <label>Search:</label>
+        <input type="text" id="filter-search-v2" placeholder="Player name..." oninput="renderFieldTableV2()">
+        <button class="filter-btn" onclick="resetFieldFiltersV2()" title="Clear all filters">Clear / Reset</button>
+        <label style="margin-left:auto;color:var(--text-muted);font-size:11px;" id="field-count-v2"></label>
+    </div>
+    <div class="card">
+        <div class="table-scroll">
+            <table class="pred-table" id="field-table-v2">
+                <thead>
+                    <tr>
+                        <th onclick="sortFieldV2('predRankV2')" data-tip="V2 Model ranking — enhanced with 5 proximity + short game factors">#</th>
+                        <th onclick="sortFieldV2('name')" data-tip="Player name">Player</th>
+                        <th onclick="sortFieldV2('tour')" data-tip="Tour affiliation">Tour</th>
+                        <th onclick="sortFieldV2('oddsNum')" data-tip="Current betting odds">Odds</th>
+                        <th onclick="sortFieldV2('proxHole')" data-tip="Proximity to Hole — avg distance of approach shots from the pin (feet). Lower = better iron play. Elite: &lt;28ft" style="color:var(--masters-gold)">Prox Hole</th>
+                        <th onclick="sortFieldV2('sgApproach')" data-tip="Strokes Gained: Approach — #1 predictor at Augusta">SG: App</th>
+                        <th onclick="sortFieldV2('gir')" data-tip="Greens in Regulation %">GIR %</th>
+                        <th onclick="sortFieldV2('sgATG')" data-tip="Strokes Gained: Around the Green">SG: ATG</th>
+                        <th onclick="sortFieldV2('proxARG')" data-tip="Proximity to Hole ARG — avg distance after chips/pitches (feet). Lower = better touch. Elite: &lt;6.5ft" style="color:var(--masters-gold)">Prox ARG</th>
+                        <th onclick="sortFieldV2('puttInside10')" data-tip="Putting Inside 10 Feet — conversion rate on short putts. Augusta's fast greens punish misses. Elite: 92%+" style="color:var(--masters-gold)">Putt &lt;10ft</th>
+                        <th onclick="sortFieldV2('threePuttAvoid')" data-tip="3-Putt Avoidance — % of holes without 3-putts. Augusta's slopes make this critical. Elite: 98%+" style="color:var(--masters-gold)">3-Putt Avoid</th>
+                        <th onclick="sortFieldV2('scramble30')" data-tip="Scrambling from 30+ Yards — save % from longer distances around the green. Augusta runoffs demand this. Elite: 55%+" style="color:var(--masters-gold)">Scramble 30+</th>
+                        <th onclick="sortFieldV2('par5')" data-tip="Par 5 scoring average — key separator at Augusta">Par 5</th>
+                        <th onclick="sortFieldV2('augustaApp')" data-tip="Number of Masters appearances">Aug Exp</th>
+                        <th onclick="sortFieldV2('predScore')" data-tip="Original V1 model score (12 factors)">V1</th>
+                        <th onclick="sortFieldV2('predScoreV2')" data-tip="V2 model score (16 factors including proximity + short game metrics)">V2</th>
+                        <th onclick="sortFieldV2('v2diff')" data-tip="Difference: V2 minus V1. Positive = player benefits from enhanced short game metrics">Diff</th>
+                    </tr>
+                </thead>
+                <tbody id="field-tbody-v2"></tbody>
             </table>
         </div>
     </div>
@@ -2508,6 +2569,94 @@ const MODEL_WEIGHTS = {
 };
 
 // ========================================================================
+// V2 ENHANCED STATS — Proximity + Short Game Metrics
+// ========================================================================
+// proxHole: Proximity to hole from approach shots (feet, lower = better)
+// puttInside10: Putting % from inside 10 feet (higher = better)
+// threePuttAvoid: % of holes without 3-putts (higher = better)
+// scramble30: Scrambling % from 30+ yards (higher = better)
+// proxARG: Proximity to hole from around the green (feet, lower = better)
+const V2_STATS = {
+    "Scottie Scheffler":    { proxHole:27.2, puttInside10:91.5, threePuttAvoid:98.2, scramble30:52.8, proxARG:6.8 },
+    "Jon Rahm":             { proxHole:28.5, puttInside10:89.8, threePuttAvoid:97.5, scramble30:50.2, proxARG:7.2 },
+    "Rory McIlroy":         { proxHole:29.8, puttInside10:90.2, threePuttAvoid:97.8, scramble30:46.5, proxARG:8.1 },
+    "Bryson DeChambeau":    { proxHole:30.5, puttInside10:87.2, threePuttAvoid:96.5, scramble30:44.8, proxARG:8.8 },
+    "Xander Schauffele":    { proxHole:28.2, puttInside10:92.5, threePuttAvoid:98.5, scramble30:54.2, proxARG:6.5 },
+    "Ludvig Aberg":         { proxHole:27.8, puttInside10:89.5, threePuttAvoid:97.2, scramble30:47.5, proxARG:7.5 },
+    "Collin Morikawa":      { proxHole:26.5, puttInside10:88.2, threePuttAvoid:97.5, scramble30:48.2, proxARG:7.8 },
+    "Tommy Fleetwood":      { proxHole:29.2, puttInside10:88.8, threePuttAvoid:97.8, scramble30:50.5, proxARG:7.2 },
+    "Matt Fitzpatrick":     { proxHole:27.5, puttInside10:90.5, threePuttAvoid:98.0, scramble30:52.5, proxARG:6.8 },
+    "Cameron Young":        { proxHole:30.2, puttInside10:86.8, threePuttAvoid:96.2, scramble30:43.5, proxARG:9.0 },
+    "Patrick Cantlay":      { proxHole:29.5, puttInside10:91.2, threePuttAvoid:98.5, scramble30:55.8, proxARG:6.2 },
+    "Brooks Koepka":        { proxHole:29.8, puttInside10:86.5, threePuttAvoid:96.0, scramble30:44.2, proxARG:8.5 },
+    "Justin Rose":          { proxHole:30.5, puttInside10:88.2, threePuttAvoid:97.5, scramble30:51.5, proxARG:7.0 },
+    "Jordan Spieth":        { proxHole:31.2, puttInside10:92.8, threePuttAvoid:98.2, scramble30:58.5, proxARG:5.8 },
+    "Hideki Matsuyama":     { proxHole:27.8, puttInside10:89.2, threePuttAvoid:97.5, scramble30:47.8, proxARG:7.5 },
+    "Viktor Hovland":       { proxHole:29.2, puttInside10:89.8, threePuttAvoid:97.2, scramble30:41.5, proxARG:9.2 },
+    "Shane Lowry":          { proxHole:30.8, puttInside10:90.8, threePuttAvoid:98.0, scramble30:52.2, proxARG:6.8 },
+    "Sahith Theegala":      { proxHole:29.5, puttInside10:89.5, threePuttAvoid:97.5, scramble30:48.5, proxARG:7.5 },
+    "Robert MacIntyre":     { proxHole:30.2, puttInside10:89.0, threePuttAvoid:97.2, scramble30:48.8, proxARG:7.5 },
+    "Min Woo Lee":          { proxHole:29.8, puttInside10:88.5, threePuttAvoid:97.0, scramble30:46.2, proxARG:8.0 },
+    "Patrick Reed":         { proxHole:32.5, puttInside10:89.5, threePuttAvoid:97.2, scramble30:50.8, proxARG:7.2 },
+    "Cameron Smith":        { proxHole:32.2, puttInside10:93.5, threePuttAvoid:98.8, scramble30:59.2, proxARG:5.5 },
+    "Dustin Johnson":       { proxHole:31.8, puttInside10:86.2, threePuttAvoid:96.2, scramble30:43.5, proxARG:8.8 },
+    "Tony Finau":           { proxHole:30.5, puttInside10:87.8, threePuttAvoid:96.8, scramble30:45.2, proxARG:8.2 },
+    "Sam Burns":            { proxHole:30.2, puttInside10:89.5, threePuttAvoid:97.5, scramble30:49.2, proxARG:7.5 },
+    "Sungjae Im":           { proxHole:29.5, puttInside10:90.2, threePuttAvoid:97.8, scramble30:49.5, proxARG:7.2 },
+    "Tom Kim":              { proxHole:29.8, puttInside10:91.0, threePuttAvoid:98.0, scramble30:48.2, proxARG:7.5 },
+    "Wyndham Clark":        { proxHole:30.5, puttInside10:88.2, threePuttAvoid:97.0, scramble30:45.8, proxARG:8.2 },
+    "Keegan Bradley":       { proxHole:30.8, puttInside10:89.0, threePuttAvoid:97.5, scramble30:49.5, proxARG:7.5 },
+    "Russell Henley":       { proxHole:28.2, puttInside10:88.5, threePuttAvoid:97.8, scramble30:50.2, proxARG:7.0 },
+    "Corey Conners":        { proxHole:26.8, puttInside10:86.8, threePuttAvoid:96.5, scramble30:44.5, proxARG:8.2 },
+    "Sepp Straka":          { proxHole:30.5, puttInside10:88.0, threePuttAvoid:97.0, scramble30:46.5, proxARG:8.0 },
+    "Akshay Bhatia":        { proxHole:30.2, puttInside10:89.8, threePuttAvoid:97.2, scramble30:48.0, proxARG:7.5 },
+    "Brian Harman":         { proxHole:32.5, puttInside10:92.2, threePuttAvoid:98.5, scramble30:56.8, proxARG:5.8 },
+    "Joaquin Niemann":      { proxHole:30.2, puttInside10:87.5, threePuttAvoid:96.8, scramble30:44.8, proxARG:8.5 },
+    "Tyrrell Hatton":       { proxHole:30.5, puttInside10:88.5, threePuttAvoid:97.2, scramble30:48.0, proxARG:7.8 },
+    "Justin Thomas":        { proxHole:29.5, puttInside10:89.2, threePuttAvoid:97.5, scramble30:48.5, proxARG:7.5 },
+    "Adam Scott":           { proxHole:31.5, puttInside10:87.5, threePuttAvoid:96.8, scramble30:46.2, proxARG:8.0 },
+    "Aaron Rai":            { proxHole:29.5, puttInside10:88.8, threePuttAvoid:97.5, scramble30:47.5, proxARG:7.8 },
+    "Byeong Hun An":        { proxHole:30.0, puttInside10:89.5, threePuttAvoid:97.5, scramble30:49.0, proxARG:7.5 },
+    "Jason Day":            { proxHole:31.5, puttInside10:91.5, threePuttAvoid:98.0, scramble30:57.2, proxARG:5.5 },
+    "Danny Willett":        { proxHole:32.8, puttInside10:87.2, threePuttAvoid:96.5, scramble30:45.0, proxARG:8.5 },
+    "Tiger Woods":          { proxHole:34.5, puttInside10:85.2, threePuttAvoid:95.5, scramble30:42.8, proxARG:9.5 },
+    "Phil Mickelson":       { proxHole:35.2, puttInside10:84.5, threePuttAvoid:94.8, scramble30:44.2, proxARG:9.2 },
+    "Sergio Garcia":        { proxHole:33.2, puttInside10:86.5, threePuttAvoid:96.0, scramble30:45.5, proxARG:8.5 },
+    "Charl Schwartzel":     { proxHole:34.0, puttInside10:85.8, threePuttAvoid:95.8, scramble30:43.5, proxARG:9.0 },
+    "Bubba Watson":         { proxHole:33.5, puttInside10:84.8, threePuttAvoid:95.2, scramble30:42.2, proxARG:9.5 },
+    "Chris Kirk":           { proxHole:31.2, puttInside10:89.5, threePuttAvoid:97.5, scramble30:50.5, proxARG:7.0 },
+    "Denny McCarthy":       { proxHole:33.8, puttInside10:93.8, threePuttAvoid:99.0, scramble30:53.5, proxARG:6.2 },
+    "Taylor Pendrith":      { proxHole:31.0, puttInside10:87.5, threePuttAvoid:96.8, scramble30:44.5, proxARG:8.5 },
+    "Si Woo Kim":           { proxHole:31.5, puttInside10:90.2, threePuttAvoid:97.2, scramble30:49.8, proxARG:7.2 },
+    "Maverick McNealy":     { proxHole:31.2, puttInside10:89.0, threePuttAvoid:97.5, scramble30:48.5, proxARG:7.5 },
+    "Max Homa":             { proxHole:30.2, puttInside10:88.2, threePuttAvoid:97.0, scramble30:46.5, proxARG:8.0 },
+};
+// Default v2 stats for any player not in lookup
+const V2_DEFAULTS = { proxHole:32.0, puttInside10:87.5, threePuttAvoid:96.5, scramble30:45.0, proxARG:8.5 };
+
+// ========================================================================
+// V2 MODEL WEIGHTS (16 factors — original 12 reweighted + 5 new)
+// ========================================================================
+const MODEL_WEIGHTS_V2 = {
+    sgApproach:     { weight:0.14, label:"SG: Approach", desc:"Still the #1 predictor, slightly reduced to make room for granular metrics." },
+    sgT2GLast4:     { weight:0.11, label:"SG: T2G (Last 4)", desc:"Recent tee-to-green form." },
+    par5:           { weight:0.10, label:"Par 5 Scoring", desc:"73-88% of the winner's advantage at Augusta." },
+    augustaExp:     { weight:0.09, label:"Augusta Experience", desc:"Course knowledge is irreplaceable." },
+    proxHole:       { weight:0.08, label:"Proximity to Hole", desc:"NEW — Average approach shot proximity. Elite iron players land it closer, creating more birdie putts." },
+    sgOTT:          { weight:0.07, label:"SG: Off the Tee", desc:"Length and driving performance." },
+    owgr:           { weight:0.06, label:"World Ranking", desc:"Proxy for overall elite status." },
+    puttInside10:   { weight:0.05, label:"Putting Inside 10ft", desc:"NEW — Short putt conversion. Augusta's slopes leave many 6-10 footers that must convert." },
+    sgATG:          { weight:0.05, label:"SG: Around the Green", desc:"Short game strokes gained." },
+    threePuttAvoid: { weight:0.05, label:"3-Putt Avoidance", desc:"NEW — Augusta's multi-tiered greens create constant 3-putt danger. 98%+ is elite." },
+    gir:            { weight:0.04, label:"Greens in Regulation", desc:"Hitting greens in regulation." },
+    proxARG:        { weight:0.04, label:"Proximity ARG", desc:"NEW — How close chips/pitches finish. Augusta's runoffs demand precise touch to leave makeable putts." },
+    scramble30:     { weight:0.04, label:"Scrambling 30+ Yards", desc:"NEW — Longer scramble saves. Augusta's collection areas often leave 30-50 yard recovery shots." },
+    careerWins:     { weight:0.03, label:"Career Win Pedigree", desc:"Resume quality." },
+    sgPutt:         { weight:0.02, label:"SG: Putting", desc:"Overall putting strokes gained." },
+    recentForm:     { weight:0.03, label:"Recent Form Trend", desc:"Trending direction in recent events." }
+};
+
+// ========================================================================
 // PREDICTION ENGINE
 // ========================================================================
 function calculatePredictions() {
@@ -2616,6 +2765,145 @@ function normalize(val, range) {
 }
 
 // ========================================================================
+// V2 PREDICTION ENGINE
+// ========================================================================
+function calculatePredictionsV2() {
+    // Merge v2 stats onto players
+    PLAYERS.forEach(p => {
+        const v2 = V2_STATS[p.name] || V2_DEFAULTS;
+        p.proxHole = v2.proxHole;
+        p.puttInside10 = v2.puttInside10;
+        p.threePuttAvoid = v2.threePuttAvoid;
+        p.scramble30 = v2.scramble30;
+        p.proxARG = v2.proxARG;
+    });
+
+    const allStats = ['sgApproach','sgOTT','sgATG','sgPutt','driveDist','gir','scramble','sgT2GLast4',
+                       'proxHole','puttInside10','threePuttAvoid','scramble30','proxARG'];
+    const ranges = {};
+    allStats.forEach(s => {
+        const vals = PLAYERS.map(p => p[s]);
+        ranges[s] = { min: Math.min(...vals), max: Math.max(...vals) };
+    });
+    const par5Vals = PLAYERS.map(p => p.par5);
+    ranges.par5 = { min: Math.min(...par5Vals), max: Math.max(...par5Vals) };
+    const augustaVals = PLAYERS.map(p => p.augustaApp);
+    ranges.augustaApp = { min: Math.min(...augustaVals), max: Math.max(...augustaVals) };
+    const owgrVals = PLAYERS.map(p => p.owgr);
+    ranges.owgr = { min: Math.min(...owgrVals), max: Math.max(...owgrVals) };
+    const winVals = PLAYERS.map(p => p.careerWins);
+    ranges.careerWins = { min: Math.min(...winVals), max: Math.max(...winVals) };
+
+    PLAYERS.forEach(p => {
+        let score = 0;
+        const W = MODEL_WEIGHTS_V2;
+        score += W.sgApproach.weight * normalize(p.sgApproach, ranges.sgApproach) * 100;
+        score += W.sgT2GLast4.weight * normalize(p.sgT2GLast4, ranges.sgT2GLast4) * 100;
+        score += W.par5.weight * (1 - normalize(p.par5, ranges.par5)) * 100;
+        score += W.augustaExp.weight * normalize(p.augustaApp, ranges.augustaApp) * 100;
+        score += W.proxHole.weight * (1 - normalize(p.proxHole, ranges.proxHole)) * 100;  // lower is better
+        score += W.sgOTT.weight * normalize(p.sgOTT, ranges.sgOTT) * 100;
+        score += W.owgr.weight * (1 - normalize(p.owgr, ranges.owgr)) * 100;
+        score += W.puttInside10.weight * normalize(p.puttInside10, ranges.puttInside10) * 100;
+        score += W.sgATG.weight * normalize(p.sgATG, ranges.sgATG) * 100;
+        score += W.threePuttAvoid.weight * normalize(p.threePuttAvoid, ranges.threePuttAvoid) * 100;
+        score += W.gir.weight * normalize(p.gir, ranges.gir) * 100;
+        score += W.proxARG.weight * (1 - normalize(p.proxARG, ranges.proxARG)) * 100;  // lower is better
+        score += W.scramble30.weight * normalize(p.scramble30, ranges.scramble30) * 100;
+        score += W.careerWins.weight * normalize(p.careerWins, ranges.careerWins) * 100;
+        score += W.sgPutt.weight * normalize(p.sgPutt, ranges.sgPutt) * 100;
+        const formVal = p.formTrend === 'up' ? 1.0 : p.formTrend === 'flat' ? 0.5 : 0.0;
+        score += W.recentForm.weight * formVal * 100;
+
+        p.predScoreV2 = Math.round(score * 10) / 10;
+        p.v2diff = Math.round((p.predScoreV2 - p.predScore) * 10) / 10;
+    });
+
+    // Rank by V2 score
+    const sorted = [...PLAYERS].sort((a, b) => b.predScoreV2 - a.predScoreV2);
+    sorted.forEach((p, i) => { p.predRankV2 = i + 1; });
+}
+
+// ========================================================================
+// V2 FIELD TABLE — sort, filter, render
+// ========================================================================
+let fieldSortColV2 = 'predRankV2';
+let fieldSortDirV2 = 'asc';
+const DESC_FIRST_V2 = ['sgApproach','sgATG','sgPutt','sgOTT','sgTotal','gir','scramble30','puttInside10','threePuttAvoid','predScore','predScoreV2','v2diff','augustaApp'];
+
+function sortFieldV2(col) {
+    if (fieldSortColV2 === col) {
+        fieldSortDirV2 = fieldSortDirV2 === 'asc' ? 'desc' : 'asc';
+    } else {
+        fieldSortColV2 = col;
+        fieldSortDirV2 = DESC_FIRST_V2.includes(col) ? 'desc' : 'asc';
+    }
+    renderFieldTableV2();
+}
+
+function resetFieldFiltersV2() {
+    document.getElementById('filter-tour-v2').value = 'all';
+    document.getElementById('filter-tier-v2').value = 'all';
+    document.getElementById('filter-search-v2').value = '';
+    fieldSortColV2 = 'predRankV2';
+    fieldSortDirV2 = 'asc';
+    renderFieldTableV2();
+}
+
+function renderFieldTableV2() {
+    const tourFilter = document.getElementById('filter-tour-v2').value;
+    const tierFilter = document.getElementById('filter-tier-v2').value;
+    const search = document.getElementById('filter-search-v2').value.toLowerCase();
+
+    let filtered = PLAYERS.filter(p => {
+        if (tourFilter !== 'all' && p.tour !== tourFilter) return false;
+        if (tierFilter !== 'all' && p.tier !== tierFilter) return false;
+        if (search && !p.name.toLowerCase().includes(search)) return false;
+        return true;
+    });
+
+    filtered.sort((a, b) => {
+        let va = a[fieldSortColV2], vb = b[fieldSortColV2];
+        if (fieldSortColV2 === 'name') { va = va.toLowerCase(); vb = vb.toLowerCase(); }
+        if (va < vb) return fieldSortDirV2 === 'asc' ? -1 : 1;
+        if (va > vb) return fieldSortDirV2 === 'asc' ? 1 : -1;
+        return 0;
+    });
+
+    document.getElementById('field-count-v2').textContent = `Showing ${filtered.length} of ${PLAYERS.length} players`;
+
+    const tbody = document.getElementById('field-tbody-v2');
+    tbody.innerHTML = filtered.map(p => {
+        const diffColor = p.v2diff > 2 ? 'var(--masters-green-bright)' : p.v2diff > 0 ? 'var(--accent-cyan)' : p.v2diff < -2 ? '#ef4444' : 'var(--accent-orange)';
+        const proxColor = (v, lo, hi) => v <= lo ? 'var(--masters-gold)' : v <= hi ? 'var(--masters-green-bright)' : 'var(--text-secondary)';
+        const pctColor = (v, lo, hi) => v >= hi ? 'var(--masters-gold)' : v >= lo ? 'var(--masters-green-bright)' : 'var(--text-secondary)';
+        return `<tr>
+            <td class="rank-cell" style="color:${getTierColor(p.predScoreV2)};font-weight:800">${p.predRankV2}</td>
+            <td>
+                <span class="player-name player-link" onclick="openPlayerModal('${p.name.replace(/'/g,"\\'")}')">${p.name}</span>
+                <span class="country">${p.country}</span>
+                ${p.bestFinish.includes('Won') ? ' <span class="badge badge-champion" style="font-size:8px;">GJ</span>' : ''}
+            </td>
+            <td><span class="badge badge-${p.tour.toLowerCase()}">${p.tour}</span></td>
+            <td class="num odds-value">${p.odds}</td>
+            <td class="num" style="color:${proxColor(p.proxHole, 28, 30)};font-weight:600">${p.proxHole.toFixed(1)}'</td>
+            <td class="num" style="color:${getStatColor(p.sgApproach, 0.3, 0.6, 0.9)}">${p.sgApproach > 0 ? '+' : ''}${p.sgApproach.toFixed(2)}</td>
+            <td class="num">${p.gir}%</td>
+            <td class="num" style="color:${getStatColor(p.sgATG, 0.1, 0.2, 0.35)}">${p.sgATG > 0 ? '+' : ''}${p.sgATG.toFixed(2)}</td>
+            <td class="num" style="color:${proxColor(p.proxARG, 6.5, 7.5)};font-weight:600">${p.proxARG.toFixed(1)}'</td>
+            <td class="num" style="color:${pctColor(p.puttInside10, 89, 92)};font-weight:600">${p.puttInside10}%</td>
+            <td class="num" style="color:${pctColor(p.threePuttAvoid, 97, 98)};font-weight:600">${p.threePuttAvoid}%</td>
+            <td class="num" style="color:${pctColor(p.scramble30, 50, 55)};font-weight:600">${p.scramble30}%</td>
+            <td class="num" style="color:${p.par5 <= 4.52 ? 'var(--masters-green-bright)' : 'var(--text-secondary)'}">${p.par5.toFixed(2)}</td>
+            <td class="num">${p.augustaApp}</td>
+            <td class="num" style="color:${getTierColor(p.predScore)}">${p.predScore}</td>
+            <td class="num" style="font-weight:800;color:${getTierColor(p.predScoreV2)}">${p.predScoreV2}</td>
+            <td class="num" style="font-weight:700;color:${diffColor}">${p.v2diff > 0 ? '+' : ''}${p.v2diff.toFixed(1)}</td>
+        </tr>`;
+    }).join('');
+}
+
+// ========================================================================
 // TAB SWITCHING
 // ========================================================================
 function switchTab(tabId) {
@@ -2632,7 +2920,7 @@ function switchTabDirect(tabId) {
     document.getElementById('tab-' + tabId).classList.add('active');
     // Highlight correct tab button
     const tabs = document.querySelectorAll('.tab-btn');
-    const tabMap = { predictions:0, field:1, model:2, course:3, historical:4, betting:5 };
+    const tabMap = { predictions:0, field:1, fieldv2:2, model:3, course:4, historical:5, betting:6 };
     if (tabMap[tabId] !== undefined) tabs[tabMap[tabId]].classList.add('active');
 }
 
@@ -3567,8 +3855,10 @@ function getStatColor(val, low, mid, high) {
 // INITIALIZATION
 // ========================================================================
 calculatePredictions();
+calculatePredictionsV2();
 renderPredictions();
 renderFieldTable();
+renderFieldTableV2();
 renderModel();
 renderCourse();
 renderHistorical();
